@@ -52,6 +52,7 @@ const Card = (() => {
       resultWrongList: document.getElementById('result-wrong-list'),
       btnRetry:      document.getElementById('btn-retry'),
       btnHome:       document.getElementById('btn-home'),
+      btnSpeak:      document.getElementById('btn-speak'),
     };
   }
 
@@ -73,6 +74,7 @@ const Card = (() => {
     showStudyView();
     renderCard();
     bindEvents();
+    initTTS();
   }
 
   /**
@@ -98,6 +100,9 @@ const Card = (() => {
     setAnswerButtonsVisible(false);
 
     updateProgress();
+
+    // 카드 진입 시 자동 발음 (300ms 딜레이: 카드 등장 후 재생)
+    setTimeout(() => speakJapanese(word.japanese), 300);
   }
 
   /**
@@ -170,6 +175,13 @@ const Card = (() => {
       Quiz.clearSession();
       App.navigateTo('home');
     });
+
+    // 발음 듣기 버튼
+    els.btnSpeak?.addEventListener('click', (e) => {
+      e.stopPropagation(); // 카드 플립 방지
+      const word = Quiz.currentWord();
+      if (word) speakJapanese(word.japanese);
+    });
   }
 
   function handleCardFlip() {
@@ -186,7 +198,7 @@ const Card = (() => {
     if (next.done) {
       renderResult();
     } else {
-      renderCard();
+      nextCardWithTransition();
     }
   }
 
@@ -196,8 +208,27 @@ const Card = (() => {
     if (next.done) {
       renderResult();
     } else {
-      renderCard();
+      nextCardWithTransition();
     }
+  }
+
+  /**
+   * 카드 전환 시 플립 트랜지션이 끝난 후 내용 교체
+   * 1. 버튼 즉시 비활성화 (중복 클릭 방지)
+   * 2. 카드를 다시 앞면으로 되돌리는 트랜지션 실행 (500ms)
+   * 3. 트랜지션 완료 후 다음 단어 내용으로 교체
+   */
+  function nextCardWithTransition() {
+    // 버튼 중복 클릭 방지
+    setAnswerButtonsVisible(false);
+
+    // flipped 클래스 제거 → 앞면으로 되돌아가는 트랜지션 시작
+    els.card.classList.remove('flipped');
+
+    // card.css의 transition 500ms 와 맞춤
+    setTimeout(() => {
+      renderCard();
+    }, 500);
   }
 
   // ── 뷰 전환 ──────────────────────────────────────────
@@ -228,6 +259,42 @@ const Card = (() => {
       els.answerButtons.classList.remove('hidden');
     } else {
       els.answerButtons.classList.add('hidden');
+    }
+  }
+
+  // ── TTS (Web Speech API) ─────────────────────────────
+
+  /**
+   * 일본어 텍스트를 음성으로 읽기
+   * Web Speech API 미지원 브라우저에서는 버튼 자체를 숨김
+   */
+  function speakJapanese(text) {
+    if (!('speechSynthesis' in window)) return;
+
+    // 이전 발음 중단
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang  = 'ja-JP';
+    utterance.rate  = 0.9;  // 약간 느리게 (학습용)
+    utterance.pitch = 1.0;
+
+    // 버튼 피드백: 재생 중 색상 변경
+    if (els.btnSpeak) {
+      els.btnSpeak.classList.add('speaking');
+      utterance.onend = () => els.btnSpeak.classList.remove('speaking');
+    }
+
+    speechSynthesis.speak(utterance);
+  }
+
+  /**
+   * TTS 지원 여부에 따라 발음 버튼 표시/숨김
+   */
+  function initTTS() {
+    if (!els.btnSpeak) return;
+    if (!('speechSynthesis' in window)) {
+      els.btnSpeak.classList.add('hidden');
     }
   }
 
