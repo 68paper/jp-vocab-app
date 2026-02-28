@@ -52,7 +52,6 @@ const Card = (() => {
       resultWrongList: document.getElementById('result-wrong-list'),
       btnRetry:      document.getElementById('btn-retry'),
       btnHome:       document.getElementById('btn-home'),
-      btnSpeak:      document.getElementById('btn-speak'),
     };
   }
 
@@ -74,7 +73,6 @@ const Card = (() => {
     showStudyView();
     renderCard();
     bindEvents();
-    initTTS();
   }
 
   /**
@@ -100,9 +98,6 @@ const Card = (() => {
     setAnswerButtonsVisible(false);
 
     updateProgress();
-
-    // 카드 진입 시 자동 발음 (300ms 딜레이: 카드 등장 후 재생)
-    setTimeout(() => speakJapanese(word.japanese), 300);
   }
 
   /**
@@ -174,13 +169,6 @@ const Card = (() => {
     els.btnHome.addEventListener('click', () => {
       Quiz.clearSession();
       App.navigateTo('home');
-    });
-
-    // 발음 듣기 버튼
-    els.btnSpeak?.addEventListener('click', (e) => {
-      e.stopPropagation(); // 카드 플립 방지
-      const word = Quiz.currentWord();
-      if (word) speakJapanese(word.japanese);
     });
   }
 
@@ -259,42 +247,6 @@ const Card = (() => {
       els.answerButtons.classList.remove('hidden');
     } else {
       els.answerButtons.classList.add('hidden');
-    }
-  }
-
-  // ── TTS (Web Speech API) ─────────────────────────────
-
-  /**
-   * 일본어 텍스트를 음성으로 읽기
-   * Web Speech API 미지원 브라우저에서는 버튼 자체를 숨김
-   */
-  function speakJapanese(text) {
-    if (!('speechSynthesis' in window)) return;
-
-    // 이전 발음 중단
-    speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang  = 'ja-JP';
-    utterance.rate  = 0.9;  // 약간 느리게 (학습용)
-    utterance.pitch = 1.0;
-
-    // 버튼 피드백: 재생 중 색상 변경
-    if (els.btnSpeak) {
-      els.btnSpeak.classList.add('speaking');
-      utterance.onend = () => els.btnSpeak.classList.remove('speaking');
-    }
-
-    speechSynthesis.speak(utterance);
-  }
-
-  /**
-   * TTS 지원 여부에 따라 발음 버튼 표시/숨김
-   */
-  function initTTS() {
-    if (!els.btnSpeak) return;
-    if (!('speechSynthesis' in window)) {
-      els.btnSpeak.classList.add('hidden');
     }
   }
 

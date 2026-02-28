@@ -398,45 +398,6 @@
 #btn-home:hover  { border-color: var(--clr-ink); }
 #btn-home:active { transform: scale(.97); }
 
-/* ── 발음 듣기 버튼 (🔊) ─────────────────────────────── */
-.btn-speak {
-  position: absolute;
-  bottom: var(--space-md);
-  right: var(--space-md);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--clr-indigo-lt);
-  color: var(--clr-indigo);
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid rgba(61,90,138,.2);
-  transition: background var(--transition), transform var(--transition);
-  cursor: pointer;
-  /* 카드 플립 이벤트와 분리 */
-  z-index: 10;
-}
-
-.btn-speak:hover {
-  background: var(--clr-indigo);
-  color: #fff;
-  transform: scale(1.1);
-}
-
-.btn-speak:active {
-  transform: scale(.95);
-}
-
-/* 재생 중 상태 */
-.btn-speak.speaking {
-  background: var(--clr-sakura);
-  color: #fff;
-  border-color: var(--clr-sakura);
-  animation: pulse 600ms ease-in-out infinite alternate;
-}
-
 @keyframes pulse {
   from { transform: scale(1); }
   to   { transform: scale(1.15); }
