@@ -1,0 +1,251 @@
+/**
+ * card.js
+ * 카드 플립 UI 렌더링 및 이벤트 처리 모듈
+ * quiz.js에 의존한다.
+ *
+ * ── 화면 구조 ────────────────────────────────────────────
+ *
+ * #study-tab
+ *   .study-header
+ *     .progress-text        <- "3 / 10"
+ *     .progress-bar
+ *       .progress-fill
+ *   .card-container
+ *     .card                 <- 클릭/터치 시 플립
+ *       .card-front
+ *         .card-japanese    <- <ruby> 태그로 후리가나 표시
+ *         .card-category    <- 카테고리 이름
+ *       .card-back
+ *         .card-korean      <- 한글 뜻
+ *   .answer-buttons         <- 카드 뒤집힌 후 활성화
+ *     button.btn-wrong      <- ❌ 틀림
+ *     button.btn-correct    <- ✅ 맞음
+ *   .study-result           <- 학습 완료 시 표시 (평소엔 숨김)
+ *     .result-score
+ *     .result-wrong-list
+ *     button.btn-retry
+ *     button.btn-home
+ */
+
+const Card = (() => {
+
+  // ── DOM 참조 ──────────────────────────────────────────
+
+  let els = {};
+
+  function initElements() {
+    els = {
+      studyTab:      document.getElementById('study-tab'),
+      progressText:  document.getElementById('progress-text'),
+      progressFill:  document.getElementById('progress-fill'),
+      card:          document.getElementById('study-card'),
+      cardFront:     document.getElementById('card-front'),
+      cardBack:      document.getElementById('card-back'),
+      cardJapanese:  document.getElementById('card-japanese'),
+      cardCategory:  document.getElementById('card-category'),
+      cardKorean:    document.getElementById('card-korean'),
+      answerButtons: document.getElementById('answer-buttons'),
+      btnCorrect:    document.getElementById('btn-correct'),
+      btnWrong:      document.getElementById('btn-wrong'),
+      studyResult:   document.getElementById('study-result'),
+      resultScore:   document.getElementById('result-score'),
+      resultWrongList: document.getElementById('result-wrong-list'),
+      btnRetry:      document.getElementById('btn-retry'),
+      btnHome:       document.getElementById('btn-home'),
+    };
+  }
+
+  // ── 렌더링 ────────────────────────────────────────────
+
+  /**
+   * 학습 탭 진입 시 호출
+   * @param {string} categoryId - 'all' | 'wrong' | 카테고리 ID
+   */
+  function startStudy(categoryId) {
+    initElements();
+
+    const result = Quiz.startSession(categoryId);
+    if (!result.ok) {
+      showError(result.error);
+      return;
+    }
+
+    showStudyView();
+    renderCard();
+    bindEvents();
+  }
+
+  /**
+   * 현재 카드 렌더링
+   */
+  function renderCard() {
+    const word = Quiz.currentWord();
+    if (!word) return;
+
+    // 후리가나 있으면 <ruby> 태그, 없으면 그냥 텍스트
+    els.cardJapanese.innerHTML = word.furigana
+      ? `<ruby>${escapeHTML(word.japanese)}<rt>${escapeHTML(word.furigana)}</rt></ruby>`
+      : escapeHTML(word.japanese);
+
+    els.cardKorean.textContent = word.korean;
+
+    // 카테고리 이름 표시
+    const category = Data.getCategoryById(word.categoryId);
+    els.cardCategory.textContent = category ? category.name : '';
+
+    // 카드 앞면으로 초기화
+    els.card.classList.remove('flipped');
+    setAnswerButtonsVisible(false);
+
+    updateProgress();
+  }
+
+  /**
+   * 진행률 업데이트
+   */
+  function updateProgress() {
+    const { current, total, percent } = Quiz.getProgress();
+    els.progressText.textContent = `${current} / ${total}`;
+    els.progressFill.style.width = `${percent}%`;
+  }
+
+  /**
+   * 학습 완료 결과 화면 렌더링
+   */
+  function renderResult() {
+    const result = Quiz.getSessionResult();
+    if (!result) return;
+
+    // 점수
+    els.resultScore.innerHTML = `
+      <span class="result-correct">✅ ${result.correct}개</span>
+      <span class="result-divider">/</span>
+      <span class="result-total">${result.total}개</span>
+    `;
+
+    // 틀린 단어 목록
+    if (result.wrongWords.length > 0) {
+      els.resultWrongList.innerHTML = `
+        <p class="result-wrong-title">❌ 틀린 단어</p>
+        <ul class="wrong-words-list">
+          ${result.wrongWords.map(w => `
+            <li>
+              <span class="wrong-japanese">
+                ${w.furigana
+                  ? `<ruby>${escapeHTML(w.japanese)}<rt>${escapeHTML(w.furigana)}</rt></ruby>`
+                  : escapeHTML(w.japanese)}
+              </span>
+              <span class="wrong-korean">${escapeHTML(w.korean)}</span>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    } else {
+      els.resultWrongList.innerHTML = '<p class="result-perfect">🎉 전부 맞혔어요!</p>';
+    }
+
+    showResultView();
+  }
+
+  // ── 이벤트 바인딩 ─────────────────────────────────────
+
+  function bindEvents() {
+    // 카드 클릭/터치 → 플립
+    els.card.addEventListener('click', handleCardFlip);
+
+    // 맞음 버튼
+    els.btnCorrect.addEventListener('click', handleCorrect);
+
+    // 틀림 버튼
+    els.btnWrong.addEventListener('click', handleWrong);
+
+    // 다시 풀기
+    els.btnRetry.addEventListener('click', () => {
+      const session = Quiz.getSession();
+      if (session) startStudy(session.categoryId);
+    });
+
+    // 홈으로
+    els.btnHome.addEventListener('click', () => {
+      Quiz.clearSession();
+      App.navigateTo('home');
+    });
+  }
+
+  function handleCardFlip() {
+    if (Quiz.isFlipped()) return; // 이미 뒤집혀 있으면 무시
+
+    Quiz.flipCard();
+    els.card.classList.add('flipped');
+    setAnswerButtonsVisible(true);
+  }
+
+  function handleCorrect() {
+    const next = Quiz.answerCorrect();
+    if (!next) return;
+    if (next.done) {
+      renderResult();
+    } else {
+      renderCard();
+    }
+  }
+
+  function handleWrong() {
+    const next = Quiz.answerWrong();
+    if (!next) return;
+    if (next.done) {
+      renderResult();
+    } else {
+      renderCard();
+    }
+  }
+
+  // ── 뷰 전환 ──────────────────────────────────────────
+
+  function showStudyView() {
+    els.studyResult.classList.add('hidden');
+    els.card.classList.remove('hidden');
+    els.progressText.closest('.study-header').classList.remove('hidden');
+  }
+
+  function showResultView() {
+    els.card.classList.add('hidden');
+    els.answerButtons.classList.add('hidden');
+    els.progressText.closest('.study-header').classList.add('hidden');
+    els.studyResult.classList.remove('hidden');
+  }
+
+  function showError(message) {
+    els.studyResult.classList.remove('hidden');
+    els.resultScore.textContent = '';
+    els.resultWrongList.innerHTML = `<p class="error-message">${escapeHTML(message)}</p>`;
+    els.card.classList.add('hidden');
+    els.answerButtons.classList.add('hidden');
+  }
+
+  function setAnswerButtonsVisible(visible) {
+    if (visible) {
+      els.answerButtons.classList.remove('hidden');
+    } else {
+      els.answerButtons.classList.add('hidden');
+    }
+  }
+
+  // ── 유틸 ──────────────────────────────────────────────
+
+  function escapeHTML(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── public API ────────────────────────────────────────
+
+  return {
+    startStudy,
+    renderCard,
+  };
+
+})();
