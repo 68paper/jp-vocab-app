@@ -99,6 +99,7 @@ const Storage = (() => {
     grassLevel2:      20,  // 잔디 중간 색 기준
     grassLevel3:      30,  // 잔디 진한 색 기준
     graduationStreak:  3,  // 오답 졸업 연속 정답 횟수
+    cardOrder:    'random', // 카드 순서: 'random' | 'ordered'
   };
 
   function getSettings() {

@@ -75,6 +75,7 @@ const Settings = (() => {
       // 학습 설정
       settingDailyGoal:        document.getElementById('setting-daily-goal'),
       settingGraduationStreak: document.getElementById('setting-graduation-streak'),
+      settingCardOrder:        document.getElementById('setting-card-order'),
       settingGrass1:           document.getElementById('setting-grass-1'),
       settingGrass2:           document.getElementById('setting-grass-2'),
       settingGrass3:           document.getElementById('setting-grass-3'),
@@ -410,6 +411,7 @@ const Settings = (() => {
     const s = Storage.getSettings();
     if (els.settingDailyGoal)        els.settingDailyGoal.value        = s.dailyGoal;
     if (els.settingGraduationStreak) els.settingGraduationStreak.value = s.graduationStreak;
+    if (els.settingCardOrder)        els.settingCardOrder.value        = s.cardOrder || 'random';
     if (els.settingGrass1)           els.settingGrass1.value           = s.grassLevel1;
     if (els.settingGrass2)           els.settingGrass2.value           = s.grassLevel2;
     if (els.settingGrass3)           els.settingGrass3.value           = s.grassLevel3;
@@ -418,6 +420,7 @@ const Settings = (() => {
   function handleSaveSettings() {
     const dailyGoal        = parseInt(els.settingDailyGoal?.value, 10);
     const graduationStreak = parseInt(els.settingGraduationStreak?.value, 10);
+    const cardOrder        = els.settingCardOrder?.value || 'random';
     const grassLevel1      = parseInt(els.settingGrass1?.value, 10);
     const grassLevel2      = parseInt(els.settingGrass2?.value, 10);
     const grassLevel3      = parseInt(els.settingGrass3?.value, 10);
@@ -428,7 +431,7 @@ const Settings = (() => {
     if (grassLevel1 >= grassLevel2)                       return showMsg(els.settingsMsg, '기본 < 놀람 < 최고 순서여야 합니다.', 'error');
     if (grassLevel2 >= grassLevel3)                       return showMsg(els.settingsMsg, '기본 < 놀람 < 최고 순서여야 합니다.', 'error');
 
-    Storage.setSettings({ dailyGoal, graduationStreak, grassLevel1, grassLevel2, grassLevel3 });
+    Storage.setSettings({ dailyGoal, graduationStreak, cardOrder, grassLevel1, grassLevel2, grassLevel3 });
     showMsg(els.settingsMsg, '설정이 저장되었습니다.', 'success');
   }
 

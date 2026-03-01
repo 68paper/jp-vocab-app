@@ -65,35 +65,43 @@ const Quiz = (() => {
    * 카테고리에 맞는 오늘의 단어 배열 생성
    */
   function buildDailyWords(categoryId) {
-    const settings = Storage.getSettings();
-    const dailyGoal = settings.dailyGoal;
-    const maxWrong  = dailyGoal - 2; // 오답 최대 (새 단어 최소 2개 보장)
+    const settings   = Storage.getSettings();
+    const dailyGoal  = settings.dailyGoal;
+    const maxWrong   = dailyGoal - 2; // 오답 최대 (새 단어 최소 2개 보장)
+    const isOrdered  = settings.cardOrder === 'ordered';
 
     let allWords;
 
     if (categoryId === 'wrong') {
       // 오답노트: 오답 단어만
-      return shuffle(Data.getWrongWords()).slice(0, dailyGoal);
+      const wrongWords = Data.getWrongWords().slice(0, dailyGoal);
+      return isOrdered ? wrongWords : shuffle(wrongWords);
     } else if (categoryId === 'all') {
       allWords = Data.getWords();
     } else {
       allWords = Data.getWordsByCategory(categoryId);
     }
 
-    // 오답 단어 (wrongCount >= 1), 많이 틀린 순
+    if (isOrdered) {
+      // 순서대로: 등록 순서 그대로 dailyGoal개
+      return allWords
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .slice(0, dailyGoal);
+    }
+
+    // 랜덤: 기존 오답 우선 알고리즘
     const wrongWords = allWords
       .filter(w => w.wrongCount >= 1)
       .sort((a, b) => b.wrongCount - a.wrongCount)
       .slice(0, maxWrong);
 
-    // 새 단어 (wrongCount === 0), 등록일 오래된 순 (먼저 등록한 것 먼저)
-    const wrongIds  = new Set(wrongWords.map(w => w.id));
-    const newWords  = allWords
+    const wrongIds = new Set(wrongWords.map(w => w.id));
+    const newWords = allWords
       .filter(w => w.wrongCount === 0 && !wrongIds.has(w.id))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-    const newCount  = dailyGoal - wrongWords.length;
-    const selected  = [
+    const newCount = dailyGoal - wrongWords.length;
+    const selected = [
       ...wrongWords,
       ...newWords.slice(0, newCount),
     ];

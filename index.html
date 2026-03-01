@@ -62,6 +62,7 @@
           <div id="card-front" class="card-face">
             <span id="card-category"></span>
             <div id="card-japanese"></div>
+            <button id="btn-speak" class="btn-speak" title="발음 듣기">🔊</button>
           </div>
           <!-- 뒷면: 한글 뜻 -->
           <div id="card-back" class="card-face">
@@ -244,6 +245,17 @@
             min="1" max="10" value="3">
         </div>
 
+        <div class="setting-row">
+          <div class="setting-label">
+            카드 순서
+            <small>순서대로: 등록 순 / 랜덤: 섞어서</small>
+          </div>
+          <select class="setting-input" id="setting-card-order" style="width:80px;padding:4px 6px">
+            <option value="random">랜덤</option>
+            <option value="ordered">순서대로</option>
+          </select>
+        </div>
+
         <hr class="divider">
 
         <p class="form-label" style="margin-bottom:var(--space-md)">
@@ -330,4 +342,3 @@
 
 </body>
 </html>
-
